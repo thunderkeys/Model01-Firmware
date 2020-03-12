@@ -296,7 +296,7 @@ KEYMAPS(
 
 static void versionInfoMacro(uint8_t keyState) {
   if (keyToggledOn(keyState)) {
-    Macros.type(PSTR("Brian Almeida - bma@thunderkeys.net"));
+    Macros.type(PSTR("Brian Almeida - bma@thunderkeys.net "));
     Macros.type(PSTR(BUILD_INFORMATION));
   }
 }
