@@ -3,7 +3,7 @@
 // See "LICENSE" for license details
 
 #ifndef BUILD_INFORMATION
-#define BUILD_INFORMATION "locally built"
+#define BUILD_INFORMATION "(locally built by bma 20200726, upstream git 9df1b6a)"
 #endif
 
 
@@ -75,6 +75,12 @@
 // Support for USB quirks, like changing the key state report protocol
 #include "Kaleidoscope-USB-Quirks.h"
 
+// Support for OneShot Plugin
+#include "Kaleidoscope-OneShot.h"
+
+// Support for LEDActiveModColor Plugin
+#include "Kaleidoscope-LED-ActiveModColor.h"
+
 /** This 'enum' is a list of all the macros used by the Model 01's firmware
   * The names aren't particularly important. What is important is that each
   * is unique.
@@ -89,7 +95,9 @@
   */
 
 enum { MACRO_VERSION_INFO,
-       MACRO_ANY
+       MACRO_ANY,
+       MACRO_HYPER,
+       MACRO_MEH
      };
 
 
@@ -105,10 +113,10 @@ enum { MACRO_VERSION_INFO,
   * defined as part of the USB HID Keyboard specification. You can find the names
   * (if not yet the explanations) for all the standard `Key_` defintions offered by
   * Kaleidoscope in these files:
-  *    https://github.com/keyboardio/Kaleidoscope/blob/master/src/kaleidoscope/key_defs_keyboard.h
-  *    https://github.com/keyboardio/Kaleidoscope/blob/master/src/kaleidoscope/key_defs_consumerctl.h
-  *    https://github.com/keyboardio/Kaleidoscope/blob/master/src/kaleidoscope/key_defs_sysctl.h
-  *    https://github.com/keyboardio/Kaleidoscope/blob/master/src/kaleidoscope/key_defs_keymaps.h
+  *    https://github.com/keyboardio/Kaleidoscope/blob/master/src/key_defs_keyboard.h
+  *    https://github.com/keyboardio/Kaleidoscope/blob/master/src/key_defs_consumerctl.h
+  *    https://github.com/keyboardio/Kaleidoscope/blob/master/src/key_defs_sysctl.h
+  *    https://github.com/keyboardio/Kaleidoscope/blob/master/src/key_defs_keymaps.h
   *
   * Additional things that should be documented here include
   *   using ___ to let keypresses fall through to the previously active layer
@@ -158,10 +166,10 @@ enum { PRIMARY, NUMPAD, FUNCTION }; // layers
   *
   */
 
-#define PRIMARY_KEYMAP_QWERTY
+// #define PRIMARY_KEYMAP_QWERTY
 // #define PRIMARY_KEYMAP_COLEMAK
 // #define PRIMARY_KEYMAP_DVORAK
-// #define PRIMARY_KEYMAP_CUSTOM
+#define PRIMARY_KEYMAP_CUSTOM
 
 
 
@@ -229,14 +237,14 @@ KEYMAPS(
    Key_Backtick, Key_Q, Key_W, Key_E, Key_R, Key_T, Key_Tab,
    Key_PageUp,   Key_A, Key_S, Key_D, Key_F, Key_G,
    Key_PageDown, Key_Z, Key_X, Key_C, Key_V, Key_B, Key_Escape,
-   Key_LeftControl, Key_Backspace, Key_LeftGui, Key_LeftShift,
+   Key_LeftControl, Key_Backspace, Key_LeftGui, OSM(LeftShift),
    ShiftToLayer(FUNCTION),
 
-   M(MACRO_ANY),  Key_6, Key_7, Key_8,     Key_9,         Key_0,         LockLayer(NUMPAD),
+   M(MACRO_MEH),  Key_6, Key_7, Key_8,     Key_9,         Key_0,         LockLayer(NUMPAD),
    Key_Enter,     Key_Y, Key_U, Key_I,     Key_O,         Key_P,         Key_Equals,
                   Key_H, Key_J, Key_K,     Key_L,         Key_Semicolon, Key_Quote,
-   Key_RightAlt,  Key_N, Key_M, Key_Comma, Key_Period,    Key_Slash,     Key_Minus,
-   Key_RightShift, Key_LeftAlt, Key_Spacebar, Key_RightControl,
+   M(MACRO_HYPER),  Key_N, Key_M, Key_Comma, Key_Period,    Key_Slash,     Key_Minus,
+   OSM(RightShift), Key_LeftAlt, Key_Spacebar, Key_RightControl,
    ShiftToLayer(FUNCTION)),
 
 #else
@@ -274,7 +282,7 @@ KEYMAPS(
    Consumer_PlaySlashPause,    Consumer_ScanNextTrack, Key_LeftCurlyBracket,     Key_RightCurlyBracket,    Key_LeftBracket, Key_RightBracket, Key_F12,
                                Key_LeftArrow,          Key_DownArrow,            Key_UpArrow,              Key_RightArrow,  ___,              ___,
    Key_PcApplication,          Consumer_Mute,          Consumer_VolumeDecrement, Consumer_VolumeIncrement, ___,             Key_Backslash,    Key_Pipe,
-   ___, ___, Key_Enter, ___,
+   ___, Key_RightAlt, Key_Enter, ___,
    ___)
 ) // KEYMAPS(
 
@@ -288,9 +296,24 @@ KEYMAPS(
 
 static void versionInfoMacro(uint8_t keyState) {
   if (keyToggledOn(keyState)) {
-    Macros.type(PSTR("Keyboardio Model 01 - Kaleidoscope "));
+    Macros.type(PSTR("Brian Almeida - bma@thunderkeys.net "));
     Macros.type(PSTR(BUILD_INFORMATION));
   }
+}
+
+// one shot modifier on hyper
+static void macroOneShotHyper(uint8_t keyState) {
+  handleKeyswitchEvent(OSM(LeftAlt), UnknownKeyswitchLocation, keyState);
+  handleKeyswitchEvent(OSM(LeftShift), UnknownKeyswitchLocation, keyState);
+  handleKeyswitchEvent(OSM(LeftControl), UnknownKeyswitchLocation, keyState);
+  handleKeyswitchEvent(OSM(LeftGui), UnknownKeyswitchLocation, keyState);
+}
+
+// one shot modifier on meh
+static void macroOneShotMeh(uint8_t keyState) {
+  handleKeyswitchEvent(OSM(LeftAlt), UnknownKeyswitchLocation, keyState);
+  handleKeyswitchEvent(OSM(LeftShift), UnknownKeyswitchLocation, keyState);
+  handleKeyswitchEvent(OSM(LeftGui), UnknownKeyswitchLocation, keyState);
 }
 
 /** anyKeyMacro is used to provide the functionality of the 'Any' key.
@@ -336,6 +359,15 @@ const macro_t *macroAction(uint8_t macroIndex, uint8_t keyState) {
   case MACRO_ANY:
     anyKeyMacro(keyState);
     break;
+
+  case MACRO_HYPER:
+    macroOneShotHyper(keyState);
+    break;
+
+  case MACRO_MEH:
+    macroOneShotMeh(keyState);
+    break;
+
   }
   return MACRO_NONE;
 }
@@ -515,7 +547,13 @@ KALEIDOSCOPE_INIT_PLUGINS(
   // comfortable - or able - to do automatically, but can be useful
   // nevertheless. Such as toggling the key report protocol between Boot (used
   // by BIOSes) and Report (NKRO).
-  USBQuirks
+  USBQuirks,
+
+  // Enable OneShot plugin
+  OneShot,
+
+  // Apply modifier color effect
+  ActiveModColorEffect
 );
 
 /** The 'setup' function is one of the two standard Arduino sketch functions.
